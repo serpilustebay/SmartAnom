@@ -1,0 +1,24 @@
+# Core dependencies
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+matplotlib>=3.7.0
+seaborn>=0.12.2
+
+# Deep learning frameworks
+tensorflow>=2.13.0
+keras>=2.13.0
+h5py>=3.9.0
+protobuf>=4.25.0
+
+# Explainability (XAI)
+shap>=0.44.0
+
+# GUI (Tkinter is built-in for most Python distros, but ttk and related)
+ttkbootstrap>=1.10.1
+
+# Optional / Utility
+openpyxl>=3.1.2      # Excel file support
+xlrd>=2.0.1          # Legacy Excel support
+joblib>=1.3.2        # Model persistence
+scipy>=1.11.0        # Required by sklearn and shap
