@@ -1,22 +1,39 @@
+"""
+AnomalyController.py
+--------------------
+Central control layer for SmartAnom framework.
+Handles dataset loading, model execution, metric computation,
+and SHAP/XAI-based explainability for supported algorithms.
+
+"""
+
 import Scores
-from  DataLayer import DataLoader
+from DataLayer import DataLoader
 from ExplainabilityModels import ExplainabilityModels
 from Models import IFModel, BenchmarkModels
 
 
 class AnomalyController:
     """
-    Controller katmanı: veri yükleme, model çalıştırma, metrik hesaplama ve
-    açıklanabilirlik (SHAP/XAI) işlemlerini yönetir.
+    The controller layer orchestrates all SmartAnom operations:
+    - Dataset loading and preprocessing.
+    - Model execution (IF-family, benchmark models).
+    - Metric computation and tracking.
+    - Explainability via SHAP/XAI.
+
+    Attributes:
+        X (ndarray): Feature matrix.
+        y (ndarray): Labels (0 = normal, 1 = anomaly).
+        dataset (pd.DataFrame): Original dataset reference.
+        last_trained_model (object): Last fitted model instance.
+        last_model_name (str): Name of last executed model.
+        last_metrics (dict): Evaluation metrics of the last run.
     """
 
     def __init__(self):
-        # Veri bileşenleri
         self.X = None
         self.y = None
         self.dataset = None
-
-        # Model durumu
         self.last_trained_model = None
         self.last_model_name = None
         self.last_metrics = None
@@ -25,12 +42,28 @@ class AnomalyController:
     # 🧩 DATA OPERATIONS
     # ============================================================= #
     def load_dataset(self, file_path):
-        """CSV / Excel / JSON veri setini yükler ve X, y olarak ayırır."""
+        """
+        Load dataset from CSV, Excel, or JSON file and split into X, y.
+
+        Args:
+            file_path (str): Path to the dataset file.
+
+        Returns:
+            pd.DataFrame: Preview of first 10 rows.
+        """
         self.X, self.y, self.dataset = DataLoader.load_data(file_path)
         return self.dataset.head(10)
 
     def load_synthetic_data(self, choice):
-        """Sentetik veri oluşturur (moons, spiral, blobs, vs.)"""
+        """
+        Generate synthetic dataset (e.g., moons, spiral, blobs).
+
+        Args:
+            choice (str): Type of synthetic dataset.
+
+        Returns:
+            tuple: (X, y) arrays.
+        """
         self.X, self.y = DataLoader.create_SyntheticData(choice)
         self.dataset = None
         return self.X, self.y
@@ -39,7 +72,18 @@ class AnomalyController:
     # 🧠 MODEL TRAINING & EVALUATION
     # ============================================================= #
     def run_if_model(self, model_type, score_method, params):
-        """IF, EIF, GIF, SciForest, FairCutForest modellerini çalıştırır."""
+        """
+        Run Isolation Forest family models:
+        IF, EIF, GIF, SciForest, FairCutForest.
+
+        Args:
+            model_type (str): Model name.
+            score_method (str): Scoring method ("MBAS" or "SBAS").
+            params (dict): Custom hyperparameters.
+
+        Returns:
+            dict: Evaluation metrics.
+        """
         if self.X is None or self.y is None:
             raise ValueError("Dataset not loaded.")
 
@@ -49,16 +93,12 @@ class AnomalyController:
         full_params.update(params)
 
         n_trees = full_params.get("n_trees", 100)
-        sample_size = full_params.get("sample_size", 256)
+        sample_size = min(full_params.get("sample_size", 256), self.X.shape[0])
         contamination = full_params.get("contamination", 0.1)
         level = full_params.get("level", 1)
         k_planes = full_params.get("k_planes", 2)
         threshold = full_params.get("threshold", 0.95)
         majority = full_params.get("majority", 5)
-
-        n_samples = self.X.shape[0]
-        if sample_size > n_samples:
-            sample_size = n_samples
 
         model = IFModel(
             model_type=model_type,
@@ -76,14 +116,22 @@ class AnomalyController:
         self.last_trained_model = model
         self.last_model_name = model_type
         self.last_metrics = metrics
-
         return metrics
 
     def run_benchmark_model(self, selected_model, hyperparams):
-        """Benchmark modellerini çalıştırır (AE, VAE, DeepSVDD, OCSVM, LOF, EE)."""
+        """
+        Run benchmark models:
+        Autoencoder, VAE, DeepSVDD, OCSVM, LOF, Elliptic Envelope.
+
+        Args:
+            selected_model (str): Model name.
+            hyperparams (dict): Hyperparameter dictionary.
+
+        Returns:
+            dict: Evaluation metrics.
+        """
         if self.X is None or self.y is None:
             raise ValueError("Dataset not loaded.")
-
 
         metrics, model_instance = BenchmarkModels.run(
             self.X,
@@ -95,13 +143,19 @@ class AnomalyController:
         self.last_trained_model = model_instance
         self.last_model_name = selected_model
         self.last_metrics = metrics
-
         return metrics
 
     # ============================================================= #
     # 🧩 EXPLAINABILITY (SHAP & XAI)
     # ============================================================= #
     def run_explainability(self, model_name=None):
+        """
+        Run SHAP-based explainability analysis for the last trained model.
+
+        Args:
+            model_name (str, optional): Target model name.
+                If None, uses last executed model.
+        """
         if self.X is None:
             raise ValueError("Dataset not loaded.")
         if self.last_trained_model is None:
@@ -128,11 +182,15 @@ class AnomalyController:
         explain_map[model_name](model_obj, self.X)
         print(f"[Controller] Explainability completed for {model_name}")
 
+    # ============================================================= #
+    # 🧩 BATCH EXECUTION (ALL MODELS)
+    # ============================================================= #
     def run_all_models(self):
         """
-        Runs all anomaly detection models and returns a list of metrics (Accuracy).
+        Run all available anomaly detection models sequentially.
+
         Returns:
-            results (list of dict): [{"Model": model_name, "Accuracy": acc}, ...]
+            list[dict]: [{"Model": model_name, "Accuracy": acc}, ...]
         """
         if self.X is None or self.y is None:
             raise ValueError("Dataset not loaded.")
@@ -152,11 +210,12 @@ class AnomalyController:
                     metrics = self.run_if_model(model, "SBAS", {})
                 else:
                     metrics = self.run_benchmark_model(model, {})
+
                 acc = metrics.get("Accuracy", 0)
                 results.append({"Model": model, "Accuracy": acc})
                 print(f"[Controller] {model} → Accuracy: {acc:.3f}")
             except Exception as e:
                 print(f"[Controller] ⚠️ {model} failed: {e}")
                 results.append({"Model": model, "Accuracy": 0})
-        return results
 
+        return results

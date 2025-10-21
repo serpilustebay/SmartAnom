@@ -5,9 +5,17 @@ from Scores import get_param_grid_for_model
 
 
 class HyperSearchWindow(tk.Toplevel):
-    """SmartAnom - Unified Hyperparameter Search Window (Single Instance)"""
+    """SmartAnom – Unified Hyperparameter Search Window (Single Instance)."""
 
     def __init__(self, parent, model_name, controller):
+        """
+        Initialize the hyperparameter optimization window.
+
+        Args:
+            parent (tk.Widget): Parent window.
+            model_name (str): Selected model name.
+            controller: Main controller object containing dataset and methods.
+        """
         super().__init__(parent)
         self.title("🔍 Hyperparameter Optimization")
         self.geometry("540x680")
@@ -16,25 +24,17 @@ class HyperSearchWindow(tk.Toplevel):
         self.controller = controller
         self.model_name = model_name
         self.parent = parent
-
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        # ==========================================================
-        # 📦 Main Container
-        # ==========================================================
         container = ttk.Frame(self, padding=15)
         container.pack(fill="both", expand=True)
 
-        ttk.Label(
-            container,
-            text="SmartAnom Hyperparameter Optimization",
-            font=("Segoe UI", 13, "bold")
-        ).pack(pady=(0, 10))
+        ttk.Label(container,
+                  text="SmartAnom Hyperparameter Optimization",
+                  font=("Segoe UI", 13, "bold")).pack(pady=(0, 10))
         ttk.Separator(container, orient="horizontal").pack(fill="x", pady=5)
 
-        # ==========================================================
-        # 📘 Model Selection
-        # ==========================================================
+        # Model selection
         model_frame = ttk.Frame(container)
         model_frame.pack(fill="x", pady=5)
         ttk.Label(model_frame, text="Select Model:", font=("Segoe UI", 10)).pack(anchor="w")
@@ -51,9 +51,7 @@ class HyperSearchWindow(tk.Toplevel):
         model_box.pack(anchor="w", pady=3)
         model_box.bind("<<ComboboxSelected>>", lambda e: self.load_param_grid())
 
-        # ==========================================================
-        # ⚙️ Evaluation Metric
-        # ==========================================================
+        # Evaluation metric
         metric_frame = ttk.Frame(container)
         metric_frame.pack(fill="x", pady=5)
         ttk.Label(metric_frame, text="Evaluation Metric:", font=("Segoe UI", 10)).pack(anchor="w")
@@ -63,9 +61,7 @@ class HyperSearchWindow(tk.Toplevel):
                                   width=18, state="readonly")
         metric_box.pack(anchor="w", pady=3)
 
-        # ==========================================================
-        # 🔍 Search Type
-        # ==========================================================
+        # Search type
         search_frame = ttk.Frame(container)
         search_frame.pack(fill="x", pady=5)
         ttk.Label(search_frame, text="Search Type:", font=("Segoe UI", 10)).pack(anchor="w")
@@ -74,14 +70,11 @@ class HyperSearchWindow(tk.Toplevel):
                                   values=["grid"], width=18, state="readonly")
         search_box.pack(anchor="w", pady=3)
 
-        # ==========================================================
-        # 📊 Parameter Ranges (Scrollable)
-        # ==========================================================
-        ttk.Label(container, text="Parameter Ranges:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 4))
-
+        # Scrollable parameter frame
+        ttk.Label(container, text="Parameter Ranges:",
+                  font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 4))
         param_frame = ttk.Frame(container)
         param_frame.pack(fill="both", expand=True, pady=5)
-
         canvas = tk.Canvas(param_frame, bg="#f8f9fa", highlightthickness=0)
         scrollbar = ttk.Scrollbar(param_frame, orient="vertical", command=canvas.yview)
         self.scrollable_frame = ttk.Frame(canvas)
@@ -94,20 +87,14 @@ class HyperSearchWindow(tk.Toplevel):
         self.entries = {}
         self.load_param_grid()
 
-        # ==========================================================
-        # 🔘 Buttons
-        # ==========================================================
+        # Buttons
         button_frame = ttk.Frame(container)
         button_frame.pack(fill="x", pady=10)
-
         ttk.Button(button_frame, text="Run Search", style="Accent.TButton",
                    command=self.run_search).pack(side="left", padx=5)
-
         ttk.Button(button_frame, text="Close", command=self.on_close).pack(side="right", padx=5)
 
-        # ==========================================================
-        # 📈 Progress Bar (Yeni eklendi)
-        # ==========================================================
+        # Progress bar
         self.progress_frame = ttk.Frame(container)
         self.progress_frame.pack(fill="x", pady=(5, 10))
         self.progress = ttk.Progressbar(self.progress_frame, mode="indeterminate", length=400)
@@ -115,18 +102,14 @@ class HyperSearchWindow(tk.Toplevel):
         self.progress_label = ttk.Label(self.progress_frame, text="")
         self.progress_label.pack()
 
-        # ==========================================================
-        # 📈 Results
-        # ==========================================================
+        # Results section
         result_frame = ttk.LabelFrame(container, text="Results", padding=10)
         result_frame.pack(fill="both", expand=False, pady=5)
         self.result_label = ttk.Label(result_frame, text="", font=("Segoe UI", 10), justify="left")
         self.result_label.pack(anchor="w")
 
-    # ==========================================================
-    # 🧩 Load Parameter Grid for Selected Model
-    # ==========================================================
     def load_param_grid(self):
+        """Load the parameter grid dynamically for the selected model."""
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         self.entries.clear()
@@ -135,12 +118,10 @@ class HyperSearchWindow(tk.Toplevel):
         model_data = get_param_grid_for_model(model)
 
         if not model_data or "grid" not in model_data:
-            ttk.Label(
-                self.scrollable_frame,
-                text="⚠️ No grid parameters defined for this model.",
-                foreground="#d32f2f",
-                font=("Segoe UI", 10, "italic")
-            ).pack(pady=10)
+            ttk.Label(self.scrollable_frame,
+                      text="⚠️ No grid parameters defined for this model.",
+                      foreground="#d32f2f",
+                      font=("Segoe UI", 10, "italic")).pack(pady=10)
             return
 
         param_grid = model_data["grid"]
@@ -152,34 +133,27 @@ class HyperSearchWindow(tk.Toplevel):
             entry.pack(padx=4, pady=3)
             self.entries[key] = entry
 
-    # ==========================================================
-    # 🚀 Run Hyperparameter Search (Progress bar eklendi)
-    # ==========================================================
     def run_search(self):
+        """Run grid-based hyperparameter search with progress feedback."""
         model = self.model_var.get()
         metric = self.metric_var.get()
 
-        # Kullanıcının girdiği parametre aralıklarını oku
         param_grid = {}
         for k, entry in self.entries.items():
             try:
-                param_grid[k] = eval(entry.get())  # örn. [50, 100, 200]
+                param_grid[k] = eval(entry.get())
                 if not isinstance(param_grid[k], (list, tuple)):
                     raise ValueError
             except Exception:
-                messagebox.showerror(
-                    "Invalid Input",
-                    f"Parameter {k} must be a list of values, e.g. [50, 100, 200]."
-                )
+                messagebox.showerror("Invalid Input",
+                                     f"Parameter {k} must be a list of values, e.g. [50, 100, 200].")
                 return
 
-        # 🔄 Progress bar başlat
         self.progress_label.config(text="Running search... Please wait ⏳")
-        self.progress.start(10)  # hız
+        self.progress.start(10)
         self.update_idletasks()
 
         try:
-            # Kullanıcı beklerken işlemi yap
             best_params, best_score, all_results = HyperparameterSearch.grid_search_IF(
                 controller=self.controller,
                 X=self.controller.X,
@@ -189,34 +163,26 @@ class HyperSearchWindow(tk.Toplevel):
                 param_grid=param_grid
             )
 
-            # ✅ İşlem tamamlanınca progress bar durdur
             self.progress.stop()
-            self.progress_label.config(text="✅ Search complete")
+            self.progress_label.config(text="Search complete")
 
-            result_text = f"✅ Best {metric.replace('_',' ').title()}: {best_score:.3f}\n\n📊 Best Parameters:\n"
+            result_text = f"Best {metric.replace('_',' ').title()}: {best_score:.3f}\n\n📊 Best Parameters:\n"
             for k, v in best_params.items():
                 result_text += f" - {k}: {v}\n"
 
             self.result_label.config(text=result_text)
             self.controller.best_model = (model, best_params)
 
-            messagebox.showinfo(
-                "Optimization Complete",
-                f"Best {metric.replace('_',' ').title()}: {best_score:.3f}\n\nBest Parameters:\n{best_params}"
-            )
+            messagebox.showinfo("Optimization Complete",
+                                f"Best {metric.replace('_',' ').title()}: {best_score:.3f}\n\nBest Parameters:\n{best_params}")
 
         except Exception as e:
             self.progress.stop()
-            self.progress_label.config(text="❌ Error occurred")
-            messagebox.showerror(
-                "Error",
-                f"Hyperparameter search failed:\n\n{str(e)}"
-            )
+            self.progress_label.config(text="Error occurred")
+            messagebox.showerror("Error", f"Hyperparameter search failed:\n\n{str(e)}")
 
-    # ==========================================================
-    # ❌ Close Window (Singleton Reset)
-    # ==========================================================
     def on_close(self):
+        """Close the window and reset singleton reference."""
         self.destroy()
         if hasattr(self.parent, "hyper_window"):
             self.parent.hyper_window = None

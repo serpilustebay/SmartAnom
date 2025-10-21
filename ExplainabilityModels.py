@@ -17,7 +17,7 @@ from sklearn.tree import DecisionTreeRegressor
 
 
 def get_sample_slices(X, max_background=200, max_explain=100):
-    """Return background and explanation subsets based on dataset size."""
+    """Select background and explanation subsets for SHAP based on dataset size."""
     n_samples = X.shape[0]
     bg_size = min(max_background, max(10, int(n_samples * 0.5)))
     ex_size = min(max_explain, max(5, int(n_samples * 0.25)))
@@ -27,54 +27,41 @@ def get_sample_slices(X, max_background=200, max_explain=100):
 
 
 class ExplainabilityModels:
-    """Explainability (XAI) visualizations for all models in SmartAnom."""
+    """Provide SHAP-based explainability for models used in SmartAnom."""
 
-    # ============================================================
-    # 🧩 Modern Progress Popup with Animated Progressbar
-    # ============================================================
     @staticmethod
     def _show_progress_popup(message="Processing, please wait..."):
-        """Show a modern popup with animated progress bar."""
+        """Show popup window with an indeterminate progress bar."""
         popup = tk.Toplevel()
         popup.title("Processing")
         popup.geometry("340x140")
         popup.resizable(False, False)
         popup.configure(bg="#f8f9fa")
 
-        tk.Label(
-            popup, text=message, font=("Arial", 11, "bold"), bg="#f8f9fa", fg="#333"
-        ).pack(pady=15)
+        tk.Label(popup, text=message, font=("Arial", 11, "bold"),
+                 bg="#f8f9fa", fg="#333").pack(pady=15)
 
-        # Elegant indeterminate progress bar
         style = ttk.Style(popup)
         style.theme_use("clam")
         style.configure("Custom.Horizontal.TProgressbar",
                         troughcolor="#e0e0e0",
                         background="#4CAF50",
-                        thickness=20,
-                        bordercolor="#bfbfbf",
-                        lightcolor="#4CAF50",
-                        darkcolor="#4CAF50")
+                        thickness=20)
 
-        pb = ttk.Progressbar(
-            popup,
-            mode="indeterminate",
-            length=260,
-            style="Custom.Horizontal.TProgressbar"
-        )
+        pb = ttk.Progressbar(popup, mode="indeterminate",
+                             length=260,
+                             style="Custom.Horizontal.TProgressbar")
         pb.pack(pady=10)
         pb.start(10)
 
-        tk.Label(popup, text="This may take a few moments...", bg="#f8f9fa", fg="#555").pack()
+        tk.Label(popup, text="This may take a few moments...",
+                 bg="#f8f9fa", fg="#555").pack()
         popup.update()
         return popup, pb
 
-    # ============================================================
-    # 🧩 Display Matplotlib Figure with Save Option
-    # ============================================================
     @staticmethod
     def _show_plot_in_window(fig, title="SHAP Summary"):
-        """Display a Matplotlib figure in a Tkinter popup with Save/Close buttons."""
+        """Display a Matplotlib figure inside a Tkinter popup with save/close options."""
         win = tk.Toplevel()
         win.title(title)
         win.geometry("900x650")
@@ -84,6 +71,7 @@ class ExplainabilityModels:
         canvas.get_tk_widget().pack(fill="both", expand=True)
 
         def save_figure():
+            """Save the displayed SHAP figure to PNG file."""
             try:
                 file_path = filedialog.asksaveasfilename(
                     defaultextension=".png",
@@ -92,7 +80,8 @@ class ExplainabilityModels:
                 )
                 if file_path:
                     fig.savefig(file_path, dpi=300, bbox_inches="tight")
-                    messagebox.showinfo("Success", f"Plot saved successfully to:\n{file_path}")
+                    messagebox.showinfo("Success",
+                                        f"Plot saved successfully to:\n{file_path}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save plot:\n{str(e)}")
 
@@ -103,11 +92,9 @@ class ExplainabilityModels:
         tk.Button(btn_frame, text="Close", command=win.destroy,
                   bg="#E91E63", fg="white", width=15).pack(side="left", padx=10)
 
-    # ============================================================
-    # 🧩 1. Isolation Forest
-    # ============================================================
     @staticmethod
     def explain_isolation_forest(model: IsolationForest, X, feature_names=None):
+        """Generate SHAP summary plot for Isolation Forest model."""
         popup, pb = ExplainabilityModels._show_progress_popup("Explaining Isolation Forest...")
         try:
             X_bg, X_ex = get_sample_slices(X)
@@ -115,19 +102,15 @@ class ExplainabilityModels:
             shap_values = explainer(X_ex)
             fig = plt.figure(figsize=(9, 6))
             shap.summary_plot(shap_values, X_ex, feature_names=feature_names, show=False)
-            pb.stop()
-            popup.destroy()
+            pb.stop(); popup.destroy()
             ExplainabilityModels._show_plot_in_window(fig, "Isolation Forest SHAP Summary")
         except Exception as e:
-            pb.stop()
-            popup.destroy()
+            pb.stop(); popup.destroy()
             print(f"[Explainability] IsolationForest SHAP failed: {e}")
 
-    # ============================================================
-    # 🧩 2. Autoencoder
-    # ============================================================
     @staticmethod
     def explain_autoencoder(model, X, feature_names=None):
+        """Generate SHAP summary plot for Autoencoder reconstruction error."""
         popup, pb = ExplainabilityModels._show_progress_popup("Explaining Autoencoder...")
         try:
             X_bg, X_ex = get_sample_slices(X)
@@ -136,19 +119,15 @@ class ExplainabilityModels:
             shap_values = explainer(X_ex)
             fig = plt.figure(figsize=(9, 6))
             shap.summary_plot(shap_values, X_ex, feature_names=feature_names, show=False)
-            pb.stop()
-            popup.destroy()
+            pb.stop(); popup.destroy()
             ExplainabilityModels._show_plot_in_window(fig, "Autoencoder SHAP Summary")
         except Exception as e:
-            pb.stop()
-            popup.destroy()
+            pb.stop(); popup.destroy()
             print(f"[Explainability] Autoencoder SHAP failed: {e}")
 
-    # ============================================================
-    # 🧩 3. Variational Autoencoder
-    # ============================================================
     @staticmethod
     def explain_vae(model, X, feature_names=None):
+        """Generate SHAP summary plot for Variational Autoencoder reconstruction error."""
         popup, pb = ExplainabilityModels._show_progress_popup("Explaining Variational Autoencoder...")
         try:
             X_bg, X_ex = get_sample_slices(X)
@@ -159,23 +138,22 @@ class ExplainabilityModels:
             if shap_values is None or np.all(np.abs(shap_values.values) < 1e-9):
                 pb.stop(); popup.destroy()
                 fig, ax = plt.subplots()
-                ax.text(0.5, 0.5, "No meaningful SHAP values", ha="center", va="center", color="gray")
+                ax.text(0.5, 0.5, "No meaningful SHAP values",
+                        ha="center", va="center", color="gray")
                 ax.axis("off")
                 ExplainabilityModels._show_plot_in_window(fig, "VAE SHAP (Empty)")
                 return
             fig = plt.figure(figsize=(9, 6))
             shap.summary_plot(shap_values, X_ex, feature_names=feature_names, show=False)
             pb.stop(); popup.destroy()
-            ExplainabilityModels._show_plot_in_window(fig, "VAE SHAP Summary (Reconstruction Error)")
+            ExplainabilityModels._show_plot_in_window(fig, "VAE SHAP Summary")
         except Exception as e:
             pb.stop(); popup.destroy()
             print(f"[Explainability] VAE SHAP failed: {e}")
 
-    # ============================================================
-    # 🧩 4. DeepSVDD
-    # ============================================================
     @staticmethod
     def explain_deepsvdd(model, X, feature_names=None, center_attr=None):
+        """Generate SHAP summary plot for DeepSVDD using distance to center."""
         popup, pb = ExplainabilityModels._show_progress_popup("Explaining DeepSVDD model...")
         try:
             X_bg, X_ex = get_sample_slices(X)
@@ -189,16 +167,14 @@ class ExplainabilityModels:
             fig = plt.figure(figsize=(9, 6))
             shap.summary_plot(shap_values, X_ex, feature_names=feature_names, show=False)
             pb.stop(); popup.destroy()
-            ExplainabilityModels._show_plot_in_window(fig, "DeepSVDD SHAP Summary (Distance-Based)")
+            ExplainabilityModels._show_plot_in_window(fig, "DeepSVDD SHAP Summary")
         except Exception as e:
             pb.stop(); popup.destroy()
             print(f"[Explainability] DeepSVDD SHAP failed: {e}")
 
-    # ============================================================
-    # 🧩 5. One-Class SVM
-    # ============================================================
     @staticmethod
     def explain_ocsvm(model: OneClassSVM, X, feature_names=None):
+        """Generate SHAP summary plot for One-Class SVM."""
         popup, pb = ExplainabilityModels._show_progress_popup("Explaining One-Class SVM...")
         try:
             X_bg, X_ex = get_sample_slices(X)
@@ -212,11 +188,9 @@ class ExplainabilityModels:
             pb.stop(); popup.destroy()
             print(f"[Explainability] One-Class SVM SHAP failed: {e}")
 
-    # ============================================================
-    # 🧩 6. Local Outlier Factor
-    # ============================================================
     @staticmethod
     def explain_lof(model: LocalOutlierFactor, X, feature_names=None):
+        """Generate SHAP explanation for Local Outlier Factor using surrogate tree."""
         popup, pb = ExplainabilityModels._show_progress_popup("Explaining Local Outlier Factor...")
         try:
             lof_scores = -model.negative_outlier_factor_
@@ -232,11 +206,9 @@ class ExplainabilityModels:
             pb.stop(); popup.destroy()
             print(f"[Explainability] LOF SHAP (surrogate) failed: {e}")
 
-    # ============================================================
-    # 🧩 7. Elliptic Envelope
-    # ============================================================
     @staticmethod
     def explain_elliptic(model: EllipticEnvelope, X, feature_names=None):
+        """Plot Mahalanobis distance distribution for Elliptic Envelope model."""
         fig, ax = plt.subplots()
         dist = model.mahalanobis(X)
         ax.hist(dist, bins=30, color='salmon', edgecolor='black')
